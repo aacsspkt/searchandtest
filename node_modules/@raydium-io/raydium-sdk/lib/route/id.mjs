@@ -1,0 +1,2 @@
+import{PublicKey as e}from"@solana/web3.js";var o="routeUGWgWzqBWFcrCfv8tritsqukccJPu3q5GPP3xS",i=new e(o),n={[o]:1},_={1:i},O={1:4};export{n as ROUTE_PROGRAMID_TO_VERSION,i as ROUTE_PROGRAM_ID_V1,O as ROUTE_VERSION_TO_LIQUIDITY_VERSION,_ as ROUTE_VERSION_TO_PROGRAMID,o as _ROUTE_PROGRAM_ID_V1};
+//# sourceMappingURL=id.mjs.map

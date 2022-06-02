@@ -1,0 +1,3 @@
+declare type StableVersion = 1;
+
+export { StableVersion };
