@@ -1,11 +1,11 @@
-import { Liquidity, Percent, SPL_ACCOUNT_LAYOUT, Token, TokenAccount, TokenAmount } from "@raydium-io/raydium-sdk";
+import { Currency, Liquidity, Percent, SPL_ACCOUNT_LAYOUT, Token, TokenAccount, TokenAmount } from "@raydium-io/raydium-sdk";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, NATIVE_MINT, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { clusterApiUrl, Connection, Keypair, PublicKey, sendAndConfirmTransaction, Signer, Transaction, TransactionInstruction } from "@solana/web3.js"
 import { fetchPoolKeys } from "./util_devnet";
 import bs58 from "bs58";
 import { Token as Tokens } from "@solana/spl-token";
 
-const connection = new Connection(clusterApiUrl("devnet"))
+const connection = new Connection(clusterApiUrl("devnet"));
 
 
 const getAssociatedTokenAddress = async (owner: PublicKey, mint: PublicKey) => {
@@ -49,7 +49,8 @@ const syncNative = async (ownerNativeMintAccount: PublicKey) => {
 }
 
 const secretKey = bs58.decode('5iChpJ6MWNQpHK8fhz71YVn3YSC1VgWxUzsypCqRrJrqF9bnrdB6G9jvfAwH9FfjKPpigeEA7fWqjX47nGA5ByQ9');
-const SOL_USDT = "384zMi9MbUKVUfkUdrnuMfWBwJR9gadSxYimuXeJ9DaJ";
+const SOL_USDT = "384zMi9MbUKVUfkUdrnuMfWBwJR9gadSxYimuXeJ9DaJ"; // devnet
+const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2" // mainnet
 
 const ownerKeypair = Keypair.fromSecretKey(secretKey);
 
@@ -75,60 +76,94 @@ const ownerKeypair = Keypair.fromSecretKey(secretKey);
     const poolInfo = await Liquidity.fetchInfo({ connection, poolKeys })
     // console.log(poolInfo);
 
-    const amountIn = new TokenAmount(new Token(poolKeys.baseMint, poolInfo.baseDecimals), 0.1, false)
-    console.log(amountIn);
-
-    const currencyOut = new Token(poolKeys.quoteMint, poolInfo.quoteDecimals)
-    console.log(currencyOut);
+    const amount = new TokenAmount(new Token(poolKeys.baseMint, poolInfo.baseDecimals), 0.1, false);
+    const anotherCurrency = new Currency(poolInfo.quoteDecimals);
 
     const slippage = new Percent(5, 100)
-    console.log(slippage);
 
     const {
-        amountOut,
-        minAmountOut,
-        currentPrice,
-        executionPrice,
-        priceImpact,
-        fee,
-    } = await
-            Liquidity.computeAmountOut({ poolKeys, poolInfo, amountIn, currencyOut, slippage, })
-    console.log(`amountOut: ${JSON.stringify(amountOut)},
-                minAmountOut: ${minAmountOut},
-                currentPrice: ${currentPrice},
-                executionPrice: ${executionPrice},
-                priceImpact: ${priceImpact},
-                fee: ${fee}`);
+        anotherAmount,
+        maxAnotherAmount
+    } = Liquidity.computeAnotherAmount({ poolKeys, poolInfo, amount, anotherCurrency, slippage, })
 
+    console.log(`addLiquidity: ${poolKeys.id.toBase58()}, base amount: ${amount.toFixed()}, quote amount: ${anotherAmount.toFixed()}`,)
 
-    const { transaction, signers } = await Liquidity.makeSwapTransaction({
+    const amountInB = new TokenAmount(new Token(poolKeys.quoteMint, poolInfo.quoteDecimals), maxAnotherAmount.toFixed(), false)
+    const { transaction, signers } = await Liquidity.makeAddLiquidityTransaction({
         connection,
         poolKeys,
         userKeys: {
             tokenAccounts,
             owner,
         },
-        amountIn,
-        amountOut: minAmountOut,
-        fixedSide: "in"
+        amountInA: amount,
+        amountInB,
+        fixedSide: 'a'
     })
+    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    console.log(transaction);
+    console.log(signers);
+    transaction.feePayer = owner;
+    transaction.sign(...[ownerKeypair, ...signers]);
 
-    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-    const txnSigners: Array<Signer> = [ownerKeypair, ...signers];
-    transaction.sign(...txnSigners)
+    const sig = await connection.sendRawTransaction(transaction.serialize());
+
+    console.log(sig);
+    // const amountIn = new TokenAmount(new Token(poolKeys.baseMint, poolInfo.baseDecimals), 0.1, false)
+    // console.log(amountIn);
 
 
-    console.log("\n")
-    console.log("itxn length: ", transaction.instructions.length);
+    // const slippage = new Percent(5, 100)
+    // console.log(slippage);
 
-    console.log()
+    // const {
+    //     amountOut,
+    //     minAmountOut,
+    //     currentPrice,
+    //     executionPrice,
+    //     priceImpact,
+    //     fee,
+    // } = await
+    //         Liquidity.computeAmountOut({ poolKeys, poolInfo, amountIn, currencyOut, slippage, })
+    // console.log(`amountOut: ${JSON.stringify(amountOut)},
+    //             minAmountOut: ${minAmountOut},
+    //             currentPrice: ${currentPrice},
+    //             executionPrice: ${executionPrice},
+    //             priceImpact: ${priceImpact},
+    //             fee: ${fee}`);
 
-    const rawTxn = transaction.serialize()
 
-    const signature = await connection.sendRawTransaction(rawTxn, {
-        skipPreflight: false,
-        preflightCommitment: "confirmed"
-    })
+    // const { transaction, signers } = await Liquidity.makeSwapTransaction({
+    //     connection,
+    //     poolKeys,
+    //     userKeys: {
+    //         tokenAccounts,
+    //         owner,
+    //     },
+    //     amountIn,
+    //     amountOut: minAmountOut,
+    //     fixedSide: "in"
+    // })
 
-    console.log(signature);
+    // transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+    // const txnSigners: Array<Signer> = [ownerKeypair, ...signers];
+    // transaction.sign(...txnSigners)
+
+
+    // console.log("\n")
+    // console.log("itxn length: ", transaction.instructions.length);
+
+    // console.log()
+
+    // const rawTxn = transaction.serialize()
+
+    // const signature = await connection.sendRawTransaction(rawTxn, {
+    //     skipPreflight: false,
+    //     preflightCommitment: "confirmed"
+    // })
+
+
+
+
+    // console.log(signature);
 })()

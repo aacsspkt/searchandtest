@@ -14,5 +14,8 @@
     "@solana/web3.js": "^1.43.4",
     "bs58": "^5.0.0",
     "node-fetch": "^3.2.4"
+  },
+  "devDependencies": {
+    "ts-node": "^10.8.1"
   }
 }
