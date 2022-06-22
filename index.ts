@@ -1,12 +1,14 @@
+import * as dotenv from "dotenv";
 import { Currency, Liquidity, Percent, SPL_ACCOUNT_LAYOUT, Token, TokenAccount, TokenAmount } from "@raydium-io/raydium-sdk";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, NATIVE_MINT, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { clusterApiUrl, Connection, Keypair, PublicKey, sendAndConfirmTransaction, Signer, Transaction, TransactionInstruction } from "@solana/web3.js"
 import { fetchPoolKeys } from "./util_devnet";
 import bs58 from "bs58";
-import { Token as Tokens } from "@solana/spl-token";
+import { fetchAllFarmPoolKeys } from "./farm_mainnet_utils";
+
+dotenv.config();
 
 const connection = new Connection(clusterApiUrl("devnet"));
-
 
 const getAssociatedTokenAddress = async (owner: PublicKey, mint: PublicKey) => {
     return (await PublicKey.findProgramAddress(
@@ -43,72 +45,84 @@ const syncNative = async (ownerNativeMintAccount: PublicKey) => {
             programId: TOKEN_PROGRAM_ID
         }));
 
-
     const signature = await sendAndConfirmTransaction(connection, txn, [ownerKeypair]);
     return signature;
 }
 
-const secretKey = bs58.decode('5iChpJ6MWNQpHK8fhz71YVn3YSC1VgWxUzsypCqRrJrqF9bnrdB6G9jvfAwH9FfjKPpigeEA7fWqjX47nGA5ByQ9');
-const SOL_USDT = "384zMi9MbUKVUfkUdrnuMfWBwJR9gadSxYimuXeJ9DaJ"; // devnet
-const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2" // mainnet
-
+const secretKeyString = process.env.SECRET;
+if (!secretKeyString) throw new Error("Could not import env args");
+const secretKey = bs58.decode(secretKeyString);
 const ownerKeypair = Keypair.fromSecretKey(secretKey);
+
+const SOL_USDT = "384zMi9MbUKVUfkUdrnuMfWBwJR9gadSxYimuXeJ9DaJ"; // devnet
+const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
 
 (async () => {
     const owner = ownerKeypair.publicKey;
-    const mint = new PublicKey("8FRFC6MoGGkMFQwngccyu69VnYbzykGeez7ignHVAFSN");
+    console.log(owner);
+    // const mint = new PublicKey("8FRFC6MoGGkMFQwngccyu69VnYbzykGeez7ignHVAFSN");
 
     // const ownerNativeMintAccount = await getAssociatedTokenAddress(owner, NATIVE_MINT);
     // const ownerTokenAccount = await getAssociatedTokenAddress(owner, mint);
 
-    const mintInfo = (connection)
-    const tokenAccounts = await getTokenAccountsByOwner(connection, owner);
+    // const mintInfo = (connection)
+    // const tokenAccounts = await getTokenAccountsByOwner(connection, owner);
 
     // console.log("ownerNativeMintAccount", ownerNativeMintAccount.toString());
     // console.log("ownerTokenAccount", ownerTokenAccount.toString());
 
+    // add farm
+    const poolKeys = await fetchAllFarmPoolKeys();
+    console.log(poolKeys)
+    // end famr
 
-    console.log("fetching pool keys")
-    const poolKeys = await fetchPoolKeys(connection, new PublicKey(SOL_USDT))
-    console.log(poolKeys.programId.toString());
-    console.log(poolKeys.marketProgramId.toString());
 
-    const poolInfo = await Liquidity.fetchInfo({ connection, poolKeys })
-    // console.log(poolInfo);
+    // // add liquidity
+    // console.log("fetching pool keys")
+    // const poolKeys = await fetchPoolKeys(connection, new PublicKey(SOL_USDT))
+    // console.log(poolKeys.programId.toString());
+    // console.log(poolKeys.marketProgramId.toString());
 
-    const amount = new TokenAmount(new Token(poolKeys.baseMint, poolInfo.baseDecimals), 0.1, false);
-    const anotherCurrency = new Currency(poolInfo.quoteDecimals);
+    // const poolInfo = await Liquidity.fetchInfo({ connection, poolKeys })
+    // // console.log(poolInfo);
 
-    const slippage = new Percent(5, 100)
+    // const amount = new TokenAmount(new Token(poolKeys.baseMint, poolInfo.baseDecimals), 0.1, false);
+    // const anotherCurrency = new Currency(poolInfo.quoteDecimals);
 
-    const {
-        anotherAmount,
-        maxAnotherAmount
-    } = Liquidity.computeAnotherAmount({ poolKeys, poolInfo, amount, anotherCurrency, slippage, })
+    // const slippage = new Percent(5, 100)
 
-    console.log(`addLiquidity: ${poolKeys.id.toBase58()}, base amount: ${amount.toFixed()}, quote amount: ${anotherAmount.toFixed()}`,)
+    // const {
+    //     anotherAmount,
+    //     maxAnotherAmount
+    // } = Liquidity.computeAnotherAmount({ poolKeys, poolInfo, amount, anotherCurrency, slippage, })
 
-    const amountInB = new TokenAmount(new Token(poolKeys.quoteMint, poolInfo.quoteDecimals), maxAnotherAmount.toFixed(), false)
-    const { transaction, signers } = await Liquidity.makeAddLiquidityTransaction({
-        connection,
-        poolKeys,
-        userKeys: {
-            tokenAccounts,
-            owner,
-        },
-        amountInA: amount,
-        amountInB,
-        fixedSide: 'a'
-    })
-    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-    console.log(transaction);
-    console.log(signers);
-    transaction.feePayer = owner;
-    transaction.sign(...[ownerKeypair, ...signers]);
+    // console.log(`addLiquidity: ${poolKeys.id.toBase58()}, base amount: ${amount.toFixed()}, quote amount: ${anotherAmount.toFixed()}`,)
 
-    const sig = await connection.sendRawTransaction(transaction.serialize());
+    // const amountInB = new TokenAmount(new Token(poolKeys.quoteMint, poolInfo.quoteDecimals), maxAnotherAmount.toFixed(), false)
+    // const { transaction, signers } = await Liquidity.makeAddLiquidityTransaction({
+    //     connection,
+    //     poolKeys,
+    //     userKeys: {
+    //         tokenAccounts,
+    //         owner,
+    //     },
+    //     amountInA: amount,
+    //     amountInB,
+    //     fixedSide: 'a'
+    // })
+    // transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    // console.log(transaction);
+    // console.log(signers);
+    // transaction.feePayer = owner;
+    // transaction.sign(...[ownerKeypair, ...signers]);
 
-    console.log(sig);
+    // const sig = await connection.sendRawTransaction(transaction.serialize());
+
+    // console.log(sig);
+    // // end add liquidity
+
+
+    // // swap
     // const amountIn = new TokenAmount(new Token(poolKeys.baseMint, poolInfo.baseDecimals), 0.1, false)
     // console.log(amountIn);
 
@@ -162,8 +176,7 @@ const ownerKeypair = Keypair.fromSecretKey(secretKey);
     //     preflightCommitment: "confirmed"
     // })
 
-
-
-
     // console.log(signature);
+
+    // // end swap
 })()
