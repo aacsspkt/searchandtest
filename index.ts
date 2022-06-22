@@ -1,10 +1,30 @@
-import * as dotenv from "dotenv";
-import { Currency, Liquidity, Percent, SPL_ACCOUNT_LAYOUT, Token, TokenAccount, TokenAmount } from "@raydium-io/raydium-sdk";
-import { ASSOCIATED_TOKEN_PROGRAM_ID, NATIVE_MINT, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { clusterApiUrl, Connection, Keypair, PublicKey, sendAndConfirmTransaction, Signer, Transaction, TransactionInstruction } from "@solana/web3.js"
-import { fetchPoolKeys } from "./util_devnet";
-import bs58 from "bs58";
-import { fetchAllFarmPoolKeys } from "./farm_mainnet_utils";
+import bs58 from 'bs58';
+import * as dotenv from 'dotenv';
+
+import {
+  Currency,
+  Liquidity,
+  Percent,
+  SPL_ACCOUNT_LAYOUT,
+  Token,
+  TokenAccount,
+  TokenAmount,
+} from '@raydium-io/raydium-sdk';
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
+import {
+  clusterApiUrl,
+  Connection,
+  Keypair,
+  PublicKey,
+  sendAndConfirmTransaction,
+  Transaction,
+  TransactionInstruction,
+} from '@solana/web3.js';
+
+import { fetchPoolKeys } from './util_devnet';
 
 dotenv.config();
 
@@ -50,7 +70,7 @@ const syncNative = async (ownerNativeMintAccount: PublicKey) => {
 }
 
 const secretKeyString = process.env.SECRET;
-if (!secretKeyString) throw new Error("Could not import env args");
+if (!secretKeyString) throw new Error("Could not load env var. Try adding .env file at root dir with var SECRET=<secret key>");
 const secretKey = bs58.decode(secretKeyString);
 const ownerKeypair = Keypair.fromSecretKey(secretKey);
 
@@ -66,60 +86,54 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
     // const ownerTokenAccount = await getAssociatedTokenAddress(owner, mint);
 
     // const mintInfo = (connection)
-    // const tokenAccounts = await getTokenAccountsByOwner(connection, owner);
+    const tokenAccounts = await getTokenAccountsByOwner(connection, owner);
 
     // console.log("ownerNativeMintAccount", ownerNativeMintAccount.toString());
     // console.log("ownerTokenAccount", ownerTokenAccount.toString());
 
-    // add farm
-    const poolKeys = await fetchAllFarmPoolKeys();
-    console.log(poolKeys)
-    // end famr
+    // add liquidity
+    console.log("fetching pool keys")
+    const poolKeys = await fetchPoolKeys(connection, new PublicKey(SOL_USDT))
+    console.log(poolKeys.programId.toString());
+    console.log(poolKeys.marketProgramId.toString());
 
+    const poolInfo = await Liquidity.fetchInfo({ connection, poolKeys })
+    // console.log(poolInfo);
 
-    // // add liquidity
-    // console.log("fetching pool keys")
-    // const poolKeys = await fetchPoolKeys(connection, new PublicKey(SOL_USDT))
-    // console.log(poolKeys.programId.toString());
-    // console.log(poolKeys.marketProgramId.toString());
+    const amount = new TokenAmount(new Token(poolKeys.baseMint, poolInfo.baseDecimals), 0.1, false);
+    const anotherCurrency = new Currency(poolInfo.quoteDecimals);
 
-    // const poolInfo = await Liquidity.fetchInfo({ connection, poolKeys })
-    // // console.log(poolInfo);
+    const slippage = new Percent(5, 100)
 
-    // const amount = new TokenAmount(new Token(poolKeys.baseMint, poolInfo.baseDecimals), 0.1, false);
-    // const anotherCurrency = new Currency(poolInfo.quoteDecimals);
+    const {
+        anotherAmount,
+        maxAnotherAmount
+    } = Liquidity.computeAnotherAmount({ poolKeys, poolInfo, amount, anotherCurrency, slippage, })
 
-    // const slippage = new Percent(5, 100)
+    console.log(`addLiquidity: ${poolKeys.id.toBase58()}, base amount: ${amount.toFixed()}, quote amount: ${anotherAmount.toFixed()}`,)
 
-    // const {
-    //     anotherAmount,
-    //     maxAnotherAmount
-    // } = Liquidity.computeAnotherAmount({ poolKeys, poolInfo, amount, anotherCurrency, slippage, })
+    const amountInB = new TokenAmount(new Token(poolKeys.quoteMint, poolInfo.quoteDecimals), maxAnotherAmount.toFixed(), false)
+    const { transaction, signers } = await Liquidity.makeAddLiquidityTransaction({
+        connection,
+        poolKeys,
+        userKeys: {
+            tokenAccounts,
+            owner,
+        },
+        amountInA: amount,
+        amountInB,
+        fixedSide: 'a'
+    })
+    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    console.log(transaction);
+    console.log(signers);
+    transaction.feePayer = owner;
+    transaction.sign(...[ownerKeypair, ...signers]);
 
-    // console.log(`addLiquidity: ${poolKeys.id.toBase58()}, base amount: ${amount.toFixed()}, quote amount: ${anotherAmount.toFixed()}`,)
+    const sig = await connection.sendRawTransaction(transaction.serialize());
 
-    // const amountInB = new TokenAmount(new Token(poolKeys.quoteMint, poolInfo.quoteDecimals), maxAnotherAmount.toFixed(), false)
-    // const { transaction, signers } = await Liquidity.makeAddLiquidityTransaction({
-    //     connection,
-    //     poolKeys,
-    //     userKeys: {
-    //         tokenAccounts,
-    //         owner,
-    //     },
-    //     amountInA: amount,
-    //     amountInB,
-    //     fixedSide: 'a'
-    // })
-    // transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-    // console.log(transaction);
-    // console.log(signers);
-    // transaction.feePayer = owner;
-    // transaction.sign(...[ownerKeypair, ...signers]);
-
-    // const sig = await connection.sendRawTransaction(transaction.serialize());
-
-    // console.log(sig);
-    // // end add liquidity
+    console.log(sig);
+    // end add liquidity
 
 
     // // swap
@@ -179,4 +193,28 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
     // console.log(signature);
 
     // // end swap
+
+    // add farm
+    // const list = await fetchAllFarmPoolKeys();
+    // // console.log(poolKeys)
+
+    // // required to somehow figure out lpmint of the 
+    // const poolKeys = list[0];
+    // console.log(poolKeys);
+
+    // // const lpmintAccounts =  await connection.getTokenAccountsByOwner(owner, {
+    // //    mint: poolKeys.lpMint,
+    // //    programId: poolKeys.programId
+    // // });
+    // const lpMintAta = await getAssociatedTokenAddress(owner, poolKeys.lpMint);
+    // const createLpmintAtaIxn = Token.createAssociatedTokenAccountInstruction(
+    //     ASSOCIATED_TOKEN_PROGRAM_ID, 
+    //     poolKeys.programId, 
+    //     poolKeys.lpMint, 
+    //     lpMintAta, 
+    //     owner, 
+    //     owner
+    //     );
+    // end famr
+
 })()
