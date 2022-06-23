@@ -1,13 +1,14 @@
-
-import { AccountInfo, Connection, PublicKey, } from "@solana/web3.js";
 import {
-  Liquidity, Market,
-  GetMultipleAccountsInfoConfig,
-  LiquidityPoolKeys,
-  LiquidityStateLayout, LiquidityAssociatedPoolKeys, getMultipleAccountsInfo,
-  LIQUIDITY_STATE_LAYOUT_V4, findProgramAddress
-} from "@raydium-io/raydium-sdk";
-
+  findProgramAddress,
+  Liquidity,
+  LIQUIDITY_STATE_LAYOUT_V4,
+  LiquidityAssociatedPoolKeys,
+  Market,
+} from '@raydium-io/raydium-sdk';
+import {
+  Connection,
+  PublicKey,
+} from '@solana/web3.js';
 
 const LIQUIDITY_PROGRAM_ID_V4 = new PublicKey('9rpQHSyFVM1dkkHFQ2TtTzPEW7DVmEyPmN8wVniqJtuC')
 const SERUM_PROGRAM_ID_V3 = new PublicKey('DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY')
@@ -313,7 +314,7 @@ async function getAssociatedPoolKeys({
 // }
 
 
-export async function fetchPoolKeys(
+export async function fetchPoolKeysDevnet(
   connection: Connection,
   poolId: PublicKey,
   version: number = 4
