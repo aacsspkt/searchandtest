@@ -102,11 +102,12 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
   ).blockhash;
   transaction.feePayer = owner;
   transaction.sign(...[ownerKeypair, ...signers]);
+
   const addLiquiditySignature = await connection.sendRawTransaction(
     transaction.serialize()
   );
+  console.log(`https://solscan.io/tx/${addLiquiditySignature} \n`);
 
-  console.log(`https://solscan.io/tx/${addLiquiditySignature}`);
   // end add liquidity
 
   // // add farm
@@ -132,19 +133,21 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
 
   // get associated token account of owner with reward mint which at first time owner may not have so create
   console.log("get or create assciated token account of owner with rewared");
+
   let rewardMintsAtas = await Promise.all(
-    farmPoolKeys.rewardInfos.map(async (rewardInfo) => {
+    farmPoolKeys.rewardInfos.map(async ({ rewardMint }) => {
       const rewardMintAta = await getOrCreateAssociatedTokenAccount(
         connection,
         ownerKeypair,
-        new PublicKey(rewardInfo.rewardMint.toString()),
+        new PublicKey(rewardMint.toString()),
         owner
       );
-      return new PublicKey(rewardMintAta);
+      return rewardMintAta;
     })
   );
 
   // get associated ledger account of owner
+  console.log("get associated ledger account of owner");
   const ledgerAddress = await Farm.getAssociatedLedgerAccount({
     programId: new PublicKey(farmPoolKeys.programId),
     poolId: new PublicKey(farmPoolKeys.id),
@@ -211,7 +214,6 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
   ).blockhash;
   farmDepositTxn.feePayer = owner;
   farmDepositTxn.sign(ownerKeypair);
-  console.log(farmDepositTxn);
 
   const farmDepositSignature = await connection.sendRawTransaction(
     farmDepositTxn.serialize()
