@@ -1,5 +1,5 @@
-import bs58 from "bs58";
-import * as dotenv from "dotenv";
+import bs58 from 'bs58';
+import * as dotenv from 'dotenv';
 
 import {
   Currency,
@@ -8,19 +8,19 @@ import {
   Percent,
   Token,
   TokenAmount,
-} from "@raydium-io/raydium-sdk";
+} from '@raydium-io/raydium-sdk';
 import {
   clusterApiUrl,
   Connection,
   Keypair,
   PublicKey,
   Transaction,
-} from "@solana/web3.js";
+} from '@solana/web3.js';
 
-import { fetchAllFarmPoolKeys } from "./utils/raydium-utils/farm-utils";
-import { fetchPoolKeys } from "./utils/raydium-utils/liquidity-utils";
-import { getTokenAccountsByOwner } from "./utils/raydium-utils/token-utils";
-import { getOrCreateAssociatedTokenAccount } from "./utils/token-utils";
+import { fetchAllFarmPoolKeys } from './utils/raydium-utils/farm-utils';
+import { fetchPoolKeys } from './utils/raydium-utils/liquidity-utils';
+import { getTokenAccountsByOwner } from './utils/raydium-utils/token-utils';
+import { getOrCreateAssociatedTokenAccount } from './utils/token-utils';
 
 // required to load env file
 dotenv.config();
@@ -133,14 +133,14 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
   // get associated token account of owner with reward mint which at first time owner may not have so create
   console.log("get or create assciated token account of owner with rewared");
   let rewardMintsAtas = await Promise.all(
-    farmPoolKeys.rewardMints.map(async (rewardMint) => {
+    farmPoolKeys.rewardInfos.map(async (rewardInfo) => {
       const rewardMintAta = await getOrCreateAssociatedTokenAccount(
         connection,
         ownerKeypair,
-        new PublicKey(rewardMint.toString()),
+        new PublicKey(rewardInfo.rewardMint.toString()),
         owner
       );
-      return rewardMintAta;
+      return new PublicKey(rewardMintAta);
     })
   );
 
