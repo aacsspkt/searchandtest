@@ -97,14 +97,22 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
     amountInB,
     fixedSide: "a",
   });
-  transaction.recentBlockhash = (
-    await connection.getLatestBlockhash()
-  ).blockhash;
+  const lbh = await connection.getLatestBlockhash();
+  transaction.recentBlockhash = lbh.blockhash;
+  transaction.lastValidBlockHeight = lbh.lastValidBlockHeight;
   transaction.feePayer = owner;
   transaction.sign(...[ownerKeypair, ...signers]);
 
   const addLiquiditySignature = await connection.sendRawTransaction(
     transaction.serialize()
+  );
+  await connection.confirmTransaction(
+    {
+      signature: addLiquiditySignature,
+      blockhash: lbh.blockhash,
+      lastValidBlockHeight: lbh.lastValidBlockHeight,
+    },
+    "confirmed"
   );
   console.log(`https://solscan.io/tx/${addLiquiditySignature} \n`);
 
@@ -170,16 +178,23 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
         },
       })
     );
-    createLedgerAccountTxn.recentBlockhash = (
-      await connection.getLatestBlockhash()
-    ).blockhash;
+    const lbh1 = await connection.getLatestBlockhash();
+    createLedgerAccountTxn.recentBlockhash = lbh1.blockhash;
+    createLedgerAccountTxn.lastValidBlockHeight = lbh1.lastValidBlockHeight;
     createLedgerAccountTxn.feePayer = owner;
     createLedgerAccountTxn.sign(ownerKeypair);
     console.log(createLedgerAccountTxn);
-    const tokenAccountCreateSignature = connection.sendRawTransaction(
+    const tokenAccountCreateSignature = await connection.sendRawTransaction(
       createLedgerAccountTxn.serialize()
     );
-
+    await connection.confirmTransaction(
+      {
+        signature: tokenAccountCreateSignature,
+        blockhash: lbh1.blockhash,
+        lastValidBlockHeight: lbh1.lastValidBlockHeight,
+      },
+      "confirmed"
+    );
     console.log(`https://solscan.io/tx/${tokenAccountCreateSignature}`);
   }
 
@@ -208,18 +223,24 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
       amount: lpMintAmount.raw,
     })
   );
-
-  farmDepositTxn.recentBlockhash = (
-    await connection.getLatestBlockhash()
-  ).blockhash;
+  const lbh2 = await connection.getLatestBlockhash();
+  farmDepositTxn.recentBlockhash = lbh2.blockhash;
+  farmDepositTxn.lastValidBlockHeight = lbh2.lastValidBlockHeight;
   farmDepositTxn.feePayer = owner;
   farmDepositTxn.sign(ownerKeypair);
 
   const farmDepositSignature = await connection.sendRawTransaction(
     farmDepositTxn.serialize()
   );
-
+  await connection.confirmTransaction(
+    {
+      signature: farmDepositSignature,
+      blockhash: lbh2.blockhash,
+      lastValidBlockHeight: lbh2.lastValidBlockHeight,
+    },
+    "confirmed"
+  );
   console.log(`https://solscan.io/tx/${farmDepositSignature}`);
 
-  // // end famr
+  // // end farm
 })();
