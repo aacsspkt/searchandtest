@@ -29,218 +29,267 @@ const connection = new Connection(clusterApiUrl("mainnet-beta"));
 
 const secretKeyString = process.env.SECRET;
 if (!secretKeyString)
-  throw new Error(
-    "Could not load env var. Try adding .env file at root dir with var SECRET=<secret key>"
-  );
+	throw new Error("Could not load env var. Try adding .env file at root dir with var SECRET=<secret key>");
 const secretKey = bs58.decode(secretKeyString);
 const ownerKeypair = Keypair.fromSecretKey(secretKey);
 
 const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
 
 (async () => {
-  const owner = ownerKeypair.publicKey;
-  console.log("owner address", owner.toString());
+	const owner = ownerKeypair.publicKey;
+	console.log("owner address", owner.toString());
 
-  console.log("getting all token accounts owned by owner");
-  const tokenAccounts = await getTokenAccountsByOwner(connection, owner);
+	console.log("getting all token accounts owned by owner");
+	const tokenAccounts = await getTokenAccountsByOwner(connection, owner);
 
-  // add liquidity
-  console.log("fetching liquidity pool keys");
-  const liquidityPoolKeys = await fetchPoolKeys(
-    connection,
-    new PublicKey(SOL_USDC)
-  );
+	// add liquidity
+	console.log("fetching liquidity pool keys");
+	const liquidityPoolKeys = await fetchPoolKeys(connection, new PublicKey(SOL_USDC));
 
-  console.log("fetching pool info");
-  const poolInfo = await Liquidity.fetchInfo({
-    connection,
-    poolKeys: liquidityPoolKeys,
-  });
-  // console.log(poolInfo);
+	console.log("fetching pool info");
+	const poolInfo = await Liquidity.fetchInfo({
+		connection,
+		poolKeys: liquidityPoolKeys,
+	});
+	// console.log(poolInfo);
 
-  const amountInA = new TokenAmount(
-    new Token(liquidityPoolKeys.baseMint, poolInfo.baseDecimals),
-    0.001,
-    false
-  );
-  const anotherCurrency = new Currency(poolInfo.quoteDecimals);
+	const amountInA = new TokenAmount(new Token(liquidityPoolKeys.baseMint, poolInfo.baseDecimals), 0.001, false);
+	const anotherCurrency = new Currency(poolInfo.quoteDecimals);
 
-  const slippage = new Percent(5, 100);
+	const slippage = new Percent(5, 100);
 
-  const { anotherAmount, maxAnotherAmount } = Liquidity.computeAnotherAmount({
-    poolKeys: liquidityPoolKeys,
-    poolInfo,
-    amount: amountInA,
-    anotherCurrency,
-    slippage,
-  });
+	const { anotherAmount, maxAnotherAmount } = Liquidity.computeAnotherAmount({
+		poolKeys: liquidityPoolKeys,
+		poolInfo,
+		amount: amountInA,
+		anotherCurrency,
+		slippage,
+	});
 
-  console.log(
-    `addLiquidity summary: ${liquidityPoolKeys.id.toBase58()}, base amount: ${amountInA.toFixed()}, quote amount: ${anotherAmount.toFixed()}`
-  );
+	console.log(
+		`addLiquidity summary: ${liquidityPoolKeys.id.toBase58()}, base amount: ${amountInA.toFixed()}, quote amount: ${anotherAmount.toFixed()}`,
+	);
 
-  const amountInB = new TokenAmount(
-    new Token(liquidityPoolKeys.quoteMint, poolInfo.quoteDecimals),
-    maxAnotherAmount.toFixed(),
-    false
-  );
+	const amountInB = new TokenAmount(
+		new Token(liquidityPoolKeys.quoteMint, poolInfo.quoteDecimals),
+		maxAnotherAmount.toFixed(),
+		false,
+	);
 
-  console.log("adding liquidity");
-  const { transaction, signers } = await Liquidity.makeAddLiquidityTransaction({
-    connection,
-    poolKeys: liquidityPoolKeys,
-    userKeys: {
-      tokenAccounts,
-      owner,
-    },
-    amountInA,
-    amountInB,
-    fixedSide: "a",
-  });
-  const lbh = await connection.getLatestBlockhash();
-  transaction.recentBlockhash = lbh.blockhash;
-  transaction.lastValidBlockHeight = lbh.lastValidBlockHeight;
-  transaction.feePayer = owner;
-  transaction.sign(...[ownerKeypair, ...signers]);
+	console.log("adding liquidity");
+	const { transaction, signers } = await Liquidity.makeAddLiquidityTransaction({
+		connection,
+		poolKeys: liquidityPoolKeys,
+		userKeys: {
+			tokenAccounts,
+			owner,
+		},
+		amountInA,
+		amountInB,
+		fixedSide: "a",
+	});
+	const lbh = await connection.getLatestBlockhash();
+	transaction.recentBlockhash = lbh.blockhash;
+	transaction.lastValidBlockHeight = lbh.lastValidBlockHeight;
+	transaction.feePayer = owner;
+	transaction.sign(...[ownerKeypair, ...signers]);
 
-  const addLiquiditySignature = await connection.sendRawTransaction(
-    transaction.serialize()
-  );
-  await connection.confirmTransaction(
-    {
-      signature: addLiquiditySignature,
-      blockhash: lbh.blockhash,
-      lastValidBlockHeight: lbh.lastValidBlockHeight,
-    },
-    "confirmed"
-  );
-  console.log(`https://solscan.io/tx/${addLiquiditySignature} \n`);
+	const addLiquiditySignature = await connection.sendRawTransaction(transaction.serialize());
+	await connection.confirmTransaction(
+		{
+			signature: addLiquiditySignature,
+			blockhash: lbh.blockhash,
+			lastValidBlockHeight: lbh.lastValidBlockHeight,
+		},
+		"confirmed",
+	);
+	console.log(`https://solscan.io/tx/${addLiquiditySignature} \n`);
 
-  // end add liquidity
+	// end add liquidity
 
-  // // add farm
-  console.log("fetching farm pool keys");
-  const list = await fetchAllFarmPoolKeys();
-  // console.log(poolKeys)
+	// // add farm
+	console.log("fetching farm pool keys");
+	const list = await fetchAllFarmPoolKeys();
+	// console.log(poolKeys)
 
-  // find farm where lp mint obtained from after adding lp.
-  const farmPoolKeys = list.find(
-    (keys) => keys.lpMint.toString() === liquidityPoolKeys.lpMint.toString()
-  );
-  // console.log(farmPoolKeys);
-  if (!farmPoolKeys) throw new Error("Farm pool keys not found.");
+	// find farm where lp mint obtained from after adding lp.
+	const farmPoolKeys = list.find((keys) => keys.lpMint.toString() === liquidityPoolKeys.lpMint.toString());
+	// console.log(farmPoolKeys);
+	if (!farmPoolKeys) throw new Error("Farm pool keys not found.");
 
-  // get associated token account of owner with lp mint
-  console.log("get or create associated token account of owner with lpmint");
-  const lpTokenAccount = await getOrCreateAssociatedTokenAccount(
-    connection,
-    ownerKeypair,
-    new PublicKey(farmPoolKeys.lpMint.toString()),
-    owner
-  );
+	// get associated token account of owner with lp mint
+	console.log("get or create associated token account of owner with lpmint");
+	const lpTokenAccount = await getOrCreateAssociatedTokenAccount(
+		connection,
+		ownerKeypair,
+		new PublicKey(farmPoolKeys.lpMint.toString()),
+		owner,
+	);
 
-  // get associated token account of owner with reward mint which at first time owner may not have so create
-  console.log("get or create assciated token account of owner with rewared");
+	// get associated token account of owner with reward mint which at first time owner may not have so create
+	console.log("get or create assciated token account of owner with rewared");
 
-  let rewardMintsAtas = await Promise.all(
-    farmPoolKeys.rewardInfos.map(async ({ rewardMint }) => {
-      const rewardMintAta = await getOrCreateAssociatedTokenAccount(
-        connection,
-        ownerKeypair,
-        new PublicKey(rewardMint.toString()),
-        owner
-      );
-      return rewardMintAta;
-    })
-  );
+	let rewardMintsAtas = await Promise.all(
+		farmPoolKeys.rewardInfos.map(async ({ rewardMint }) => {
+			const rewardMintAta = await getOrCreateAssociatedTokenAccount(
+				connection,
+				ownerKeypair,
+				new PublicKey(rewardMint.toString()),
+				owner,
+			);
+			return rewardMintAta;
+		}),
+	);
 
-  // get associated ledger account of owner
-  console.log("get associated ledger account of owner");
-  const ledgerAddress = await Farm.getAssociatedLedgerAccount({
-    programId: new PublicKey(farmPoolKeys.programId),
-    poolId: new PublicKey(farmPoolKeys.id),
-    owner,
-  });
+	// get associated ledger account of owner
+	console.log("get associated ledger account of owner");
+	const ledgerAddress = await Farm.getAssociatedLedgerAccount({
+		programId: new PublicKey(farmPoolKeys.programId),
+		poolId: new PublicKey(farmPoolKeys.id),
+		owner,
+	});
 
-  // checking if account is created in chain
-  console.log("checking if owner have farm ledger account");
-  const ledgerAccountInfo = await connection.getAccountInfo(ledgerAddress);
-  // if not created, create
-  if (!ledgerAccountInfo) {
-    console.log("crearing ledger account of owner");
-    let createLedgerAccountTxn = new Transaction();
-    createLedgerAccountTxn.add(
-      Farm.makeCreateAssociatedLedgerAccountInstruction({
-        poolKeys: farmPoolKeys,
-        userKeys: {
-          owner,
-          ledger: ledgerAddress,
-        },
-      })
-    );
-    const lbh1 = await connection.getLatestBlockhash();
-    createLedgerAccountTxn.recentBlockhash = lbh1.blockhash;
-    createLedgerAccountTxn.lastValidBlockHeight = lbh1.lastValidBlockHeight;
-    createLedgerAccountTxn.feePayer = owner;
-    createLedgerAccountTxn.sign(ownerKeypair);
-    console.log(createLedgerAccountTxn);
-    const tokenAccountCreateSignature = await connection.sendRawTransaction(
-      createLedgerAccountTxn.serialize()
-    );
-    await connection.confirmTransaction(
-      {
-        signature: tokenAccountCreateSignature,
-        blockhash: lbh1.blockhash,
-        lastValidBlockHeight: lbh1.lastValidBlockHeight,
-      },
-      "confirmed"
-    );
-    console.log(`https://solscan.io/tx/${tokenAccountCreateSignature}`);
-  }
+	// checking if account is created in chain
+	console.log("checking if owner have farm ledger account");
+	const ledgerAccountInfo = await connection.getAccountInfo(ledgerAddress);
+	// if not created, create
+	if (!ledgerAccountInfo) {
+		console.log("crearing ledger account of owner");
+		let createLedgerAccountTxn = new Transaction();
+		createLedgerAccountTxn.add(
+			Farm.makeCreateAssociatedLedgerAccountInstruction({
+				poolKeys: farmPoolKeys,
+				userKeys: {
+					owner,
+					ledger: ledgerAddress,
+				},
+			}),
+		);
+		const lbh1 = await connection.getLatestBlockhash();
+		createLedgerAccountTxn.recentBlockhash = lbh1.blockhash;
+		createLedgerAccountTxn.lastValidBlockHeight = lbh1.lastValidBlockHeight;
+		createLedgerAccountTxn.feePayer = owner;
+		createLedgerAccountTxn.sign(ownerKeypair);
+		console.log(createLedgerAccountTxn);
+		const tokenAccountCreateSignature = await connection.sendRawTransaction(createLedgerAccountTxn.serialize());
+		await connection.confirmTransaction(
+			{
+				signature: tokenAccountCreateSignature,
+				blockhash: lbh1.blockhash,
+				lastValidBlockHeight: lbh1.lastValidBlockHeight,
+			},
+			"confirmed",
+		);
+		console.log(`https://solscan.io/tx/${tokenAccountCreateSignature}`);
+	}
 
-  console.log("get lpmint balance owner have");
-  const balanceReqRes = await connection.getTokenAccountBalance(lpTokenAccount);
-  console.log(balanceReqRes.value.uiAmount);
+	console.log("get lpmint balance owner have");
+	const balanceReqRes = await connection.getTokenAccountBalance(lpTokenAccount);
+	console.log(balanceReqRes.value.uiAmount);
 
-  const lpMintAmount = new TokenAmount(
-    new Token(farmPoolKeys.lpMint, balanceReqRes.value.decimals),
-    balanceReqRes.value.uiAmount,
-    false
-  );
-  console.log("staking amount", lpMintAmount.toFixed());
+	const lpMintAmount = new TokenAmount(
+		new Token(farmPoolKeys.lpMint, balanceReqRes.value.decimals),
+		balanceReqRes.value.uiAmount,
+		false,
+	);
+	console.log("staking amount", lpMintAmount.toFixed());
 
-  console.log("staking lpmint");
-  let farmDepositTxn = new Transaction();
-  farmDepositTxn.add(
-    Farm.makeDepositInstruction({
-      poolKeys: farmPoolKeys,
-      userKeys: {
-        ledger: ledgerAddress,
-        lpTokenAccount: lpTokenAccount,
-        owner: owner,
-        rewardTokenAccounts: rewardMintsAtas,
-      },
-      amount: lpMintAmount.raw,
-    })
-  );
-  const lbh2 = await connection.getLatestBlockhash();
-  farmDepositTxn.recentBlockhash = lbh2.blockhash;
-  farmDepositTxn.lastValidBlockHeight = lbh2.lastValidBlockHeight;
-  farmDepositTxn.feePayer = owner;
-  farmDepositTxn.sign(ownerKeypair);
+	console.log("staking lpmint");
+	let farmDepositTxn = new Transaction();
+	farmDepositTxn.add(
+		Farm.makeDepositInstruction({
+			poolKeys: farmPoolKeys,
+			userKeys: {
+				ledger: ledgerAddress,
+				lpTokenAccount: lpTokenAccount,
+				owner: owner,
+				rewardTokenAccounts: rewardMintsAtas,
+			},
+			amount: lpMintAmount.raw,
+		}),
+	);
+	const lbh2 = await connection.getLatestBlockhash();
+	farmDepositTxn.recentBlockhash = lbh2.blockhash;
+	farmDepositTxn.lastValidBlockHeight = lbh2.lastValidBlockHeight;
+	farmDepositTxn.feePayer = owner;
+	farmDepositTxn.sign(ownerKeypair);
 
-  const farmDepositSignature = await connection.sendRawTransaction(
-    farmDepositTxn.serialize()
-  );
-  await connection.confirmTransaction(
-    {
-      signature: farmDepositSignature,
-      blockhash: lbh2.blockhash,
-      lastValidBlockHeight: lbh2.lastValidBlockHeight,
-    },
-    "confirmed"
-  );
-  console.log(`https://solscan.io/tx/${farmDepositSignature}`);
+	const farmDepositSignature = await connection.sendRawTransaction(farmDepositTxn.serialize());
+	await connection.confirmTransaction(
+		{
+			signature: farmDepositSignature,
+			blockhash: lbh2.blockhash,
+			lastValidBlockHeight: lbh2.lastValidBlockHeight,
+		},
+		"confirmed",
+	);
+	console.log(`https://solscan.io/tx/${farmDepositSignature}`);
 
-  // // end farm
+	// // end farm
+
+	// // withdraw rewards
+
+	const withdrawRewardTxn = new Transaction().add(
+		Farm.makeWithdrawInstruction({
+			poolKeys: farmPoolKeys,
+			userKeys: {
+				ledger: ledgerAddress,
+				lpTokenAccount,
+				owner,
+				rewardTokenAccounts: rewardMintsAtas,
+			},
+			amount: 0,
+		}),
+	);
+	const lbh3 = await connection.getLatestBlockhash();
+	withdrawRewardTxn.recentBlockhash = lbh3.blockhash;
+	withdrawRewardTxn.lastValidBlockHeight = lbh3.lastValidBlockHeight;
+	withdrawRewardTxn.feePayer = owner;
+	withdrawRewardTxn.sign(ownerKeypair);
+
+	const withdrawRewardSignature = await connection.sendRawTransaction(withdrawRewardTxn.serialize());
+	await connection.confirmTransaction(
+		{
+			signature: withdrawRewardSignature,
+			blockhash: lbh3.blockhash,
+			lastValidBlockHeight: lbh3.lastValidBlockHeight,
+		},
+		"confirmed",
+	);
+	console.log(`https://solscan.io/tx/${withdrawRewardSignature}`);
+
+	// // end withdraw rewards
+
+	// // withdraw staked lp mints from farm
+	const withdrawStakedLpTxn = new Transaction().add(
+		Farm.makeWithdrawInstruction({
+			poolKeys: farmPoolKeys,
+			userKeys: {
+				ledger: ledgerAddress,
+				lpTokenAccount,
+				owner,
+				rewardTokenAccounts: rewardMintsAtas,
+			},
+			amount: lpMintAmount.raw, // I am assuming deposited lp mint amount and withdraw amount should be same.
+		}),
+	);
+
+	const lbh4 = await connection.getLatestBlockhash();
+	withdrawStakedLpTxn.recentBlockhash = lbh4.blockhash;
+	withdrawStakedLpTxn.lastValidBlockHeight = lbh4.lastValidBlockHeight;
+	withdrawStakedLpTxn.feePayer = owner;
+	withdrawStakedLpTxn.sign(ownerKeypair);
+
+	const withdrawStakedLpSignature = await connection.sendRawTransaction(withdrawRewardTxn.serialize());
+	await connection.confirmTransaction(
+		{
+			signature: withdrawStakedLpSignature,
+			blockhash: lbh4.blockhash,
+			lastValidBlockHeight: lbh4.lastValidBlockHeight,
+		},
+		"confirmed",
+	);
+	console.log(`https://solscan.io/tx/${withdrawStakedLpSignature}`);
+
+	// // end withdraw lp mints
 })();
