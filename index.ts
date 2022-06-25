@@ -280,7 +280,7 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
 	withdrawStakedLpTxn.feePayer = owner;
 	withdrawStakedLpTxn.sign(ownerKeypair);
 
-	const withdrawStakedLpSignature = await connection.sendRawTransaction(withdrawRewardTxn.serialize());
+	const withdrawStakedLpSignature = await connection.sendRawTransaction(withdrawStakedLpTxn.serialize());
 	await connection.confirmTransaction(
 		{
 			signature: withdrawStakedLpSignature,
