@@ -34,6 +34,7 @@ const secretKey = bs58.decode(secretKeyString);
 const ownerKeypair = Keypair.fromSecretKey(secretKey);
 
 const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
+const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 
 (async () => {
 	const owner = ownerKeypair.publicKey;
@@ -44,7 +45,7 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
 
 	// add liquidity
 	console.log("fetching liquidity pool keys");
-	const liquidityPoolKeys = await fetchPoolKeys(connection, new PublicKey(SOL_USDC));
+	const liquidityPoolKeys = await fetchPoolKeys(connection, new PublicKey(SOL_USDT));
 
 	console.log("fetching pool info");
 	const poolInfo = await Liquidity.fetchInfo({
@@ -114,7 +115,7 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
 
 	// find farm where lp mint obtained from after adding lp.
 	const farmPoolKeys = list.find((keys) => keys.lpMint.toString() === liquidityPoolKeys.lpMint.toString());
-	// console.log(farmPoolKeys);
+	console.log(farmPoolKeys?.id.toString());
 	if (!farmPoolKeys) throw new Error("Farm pool keys not found.");
 
 	// get associated token account of owner with lp mint
@@ -153,7 +154,7 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
 	console.log("checking if owner have farm ledger account");
 	const ledgerAccountInfo = await connection.getAccountInfo(ledgerAddress);
 	// if not created, create
-	if (ledgerAccountInfo) {
+	if (!ledgerAccountInfo) {
 		console.log("hit here");
 		console.log("crearing ledger account of owner");
 		let createLedgerAccountTxn = new Transaction();
@@ -170,6 +171,7 @@ const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
 		createLedgerAccountTxn.recentBlockhash = lbh1.blockhash;
 		createLedgerAccountTxn.lastValidBlockHeight = lbh1.lastValidBlockHeight;
 		createLedgerAccountTxn.instructions.map((ixn) => {
+			console.log(ixn.programId.toString());
 			console.log(
 				ixn.keys.map((keys) => {
 					return {
