@@ -45,7 +45,7 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 
 	// add liquidity
 	console.log("fetching liquidity pool keys");
-	const liquidityPoolKeys = await fetchPoolKeys(connection, new PublicKey(SOL_USDC));
+	const liquidityPoolKeys = await fetchPoolKeys(connection, new PublicKey(SOL_USDT));
 
 	console.log("fetching pool info");
 	const poolInfo = await Liquidity.fetchInfo({
@@ -54,10 +54,10 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 	});
 	// console.log(poolInfo);
 
-	const amountInA = new TokenAmount(new Token(liquidityPoolKeys.baseMint, poolInfo.baseDecimals), 0.001, false);
+	const amountInA = new TokenAmount(new Token(liquidityPoolKeys.baseMint, poolInfo.baseDecimals), 0.00001, false);
 	const anotherCurrency = new Currency(poolInfo.quoteDecimals);
 
-	const slippage = new Percent(5, 100);
+	const slippage = new Percent(1, 100);
 
 	const { anotherAmount, maxAnotherAmount } = Liquidity.computeAnotherAmount({
 		poolKeys: liquidityPoolKeys,
@@ -102,7 +102,7 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 			blockhash: lbh.blockhash,
 			lastValidBlockHeight: lbh.lastValidBlockHeight,
 		},
-		"confirmed",
+		"finalized",
 	);
 	console.log(`https://solscan.io/tx/${addLiquiditySignature} \n`);
 
@@ -192,7 +192,7 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 				blockhash: lbh1.blockhash,
 				lastValidBlockHeight: lbh1.lastValidBlockHeight,
 			},
-			"confirmed",
+			"finalized",
 		);
 		// ledger account created
 		console.log(`https://solscan.io/tx/${tokenAccountCreateSignature}`);
@@ -236,7 +236,7 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 			blockhash: lbh2.blockhash,
 			lastValidBlockHeight: lbh2.lastValidBlockHeight,
 		},
-		"confirmed",
+		"finalized",
 	);
 	console.log(`https://solscan.io/tx/${farmDepositSignature}`);
 
@@ -269,7 +269,7 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 			blockhash: lbh3.blockhash,
 			lastValidBlockHeight: lbh3.lastValidBlockHeight,
 		},
-		"confirmed",
+		"finalized",
 	);
 	console.log(`https://solscan.io/tx/${withdrawRewardSignature}`);
 
@@ -303,7 +303,7 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 			blockhash: lbh4.blockhash,
 			lastValidBlockHeight: lbh4.lastValidBlockHeight,
 		},
-		"confirmed",
+		"finalized",
 	);
 	console.log(`https://solscan.io/tx/${withdrawStakedLpSignature}`);
 
