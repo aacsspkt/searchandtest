@@ -198,6 +198,14 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 		console.log(`https://solscan.io/tx/${tokenAccountCreateSignature}`);
 	}
 
+	// use just for test
+	// no need to implement in real application
+	async function sleep(msec: number) {
+		return new Promise((resolve) => setTimeout(resolve, msec));
+	}
+
+	await sleep(5000);
+
 	console.log(`checking lpmint balance of ${lpTokenAccount.toString()}`);
 	const balanceReqRes = await connection.getTokenAccountBalance(lpTokenAccount);
 	console.log(balanceReqRes.value.uiAmount);
