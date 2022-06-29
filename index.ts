@@ -45,7 +45,7 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 
 	// add liquidity
 	console.log("fetching liquidity pool keys");
-	const liquidityPoolKeys = await fetchPoolKeys(connection, new PublicKey(SOL_USDT));
+	const liquidityPoolKeys = await fetchPoolKeys(connection, new PublicKey(SOL_USDC));
 
 	console.log("fetching pool info");
 	const poolInfo = await Liquidity.fetchInfo({
@@ -95,16 +95,16 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 	transaction.feePayer = owner;
 	transaction.sign(...[ownerKeypair, ...signers]);
 
-	// const addLiquiditySignature = await connection.sendRawTransaction(transaction.serialize());
-	// await connection.confirmTransaction(
-	// 	{
-	// 		signature: addLiquiditySignature,
-	// 		blockhash: lbh.blockhash,
-	// 		lastValidBlockHeight: lbh.lastValidBlockHeight,
-	// 	},
-	// 	"confirmed",
-	// );
-	// console.log(`https://solscan.io/tx/${addLiquiditySignature} \n`);
+	const addLiquiditySignature = await connection.sendRawTransaction(transaction.serialize());
+	await connection.confirmTransaction(
+		{
+			signature: addLiquiditySignature,
+			blockhash: lbh.blockhash,
+			lastValidBlockHeight: lbh.lastValidBlockHeight,
+		},
+		"confirmed",
+	);
+	console.log(`https://solscan.io/tx/${addLiquiditySignature} \n`);
 
 	// end add liquidity
 
@@ -153,8 +153,8 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 	// checking if account is created in chain
 	console.log("checking if owner have farm ledger account");
 	const ledgerAccountInfo = await connection.getAccountInfo(ledgerAddress);
-	// if not created, create
 	if (!ledgerAccountInfo) {
+		// if not created, create
 		console.log("hit here");
 		console.log("crearing ledger account of owner");
 		let createLedgerAccountTxn = new Transaction();
@@ -182,22 +182,23 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 				}),
 			);
 		});
-		// createLedgerAccountTxn.feePayer = owner;
+		createLedgerAccountTxn.feePayer = owner;
 		createLedgerAccountTxn.sign(ownerKeypair);
 
-		// const tokenAccountCreateSignature = await connection.sendRawTransaction(createLedgerAccountTxn.serialize());
-		// await connection.confirmTransaction(
-		// 	{
-		// 		signature: tokenAccountCreateSignature,
-		// 		blockhash: lbh1.blockhash,
-		// 		lastValidBlockHeight: lbh1.lastValidBlockHeight,
-		// 	},
-		// 	"confirmed",
-		// );
-		// console.log(`https://solscan.io/tx/${tokenAccountCreateSignature}`);
+		const tokenAccountCreateSignature = await connection.sendRawTransaction(createLedgerAccountTxn.serialize());
+		await connection.confirmTransaction(
+			{
+				signature: tokenAccountCreateSignature,
+				blockhash: lbh1.blockhash,
+				lastValidBlockHeight: lbh1.lastValidBlockHeight,
+			},
+			"confirmed",
+		);
+		// ledger account created
+		console.log(`https://solscan.io/tx/${tokenAccountCreateSignature}`);
 	}
 
-	console.log("get lpmint balance owner have");
+	console.log(`checking lpmint balance of ${lpTokenAccount.toString()}`);
 	const balanceReqRes = await connection.getTokenAccountBalance(lpTokenAccount);
 	console.log(balanceReqRes.value.uiAmount);
 
@@ -228,21 +229,21 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 	farmDepositTxn.feePayer = owner;
 	farmDepositTxn.sign(ownerKeypair);
 
-	// const farmDepositSignature = await connection.sendRawTransaction(farmDepositTxn.serialize());
-	// await connection.confirmTransaction(
-	// 	{
-	// 		signature: farmDepositSignature,
-	// 		blockhash: lbh2.blockhash,
-	// 		lastValidBlockHeight: lbh2.lastValidBlockHeight,
-	// 	},
-	// 	"confirmed",
-	// );
-	// console.log(`https://solscan.io/tx/${farmDepositSignature}`);
+	const farmDepositSignature = await connection.sendRawTransaction(farmDepositTxn.serialize());
+	await connection.confirmTransaction(
+		{
+			signature: farmDepositSignature,
+			blockhash: lbh2.blockhash,
+			lastValidBlockHeight: lbh2.lastValidBlockHeight,
+		},
+		"confirmed",
+	);
+	console.log(`https://solscan.io/tx/${farmDepositSignature}`);
 
-	// // end farm
+	// end farm
 
-	// // withdraw rewards
-
+	// withdraw rewards
+	console.log("harvesting rewards");
 	const withdrawRewardTxn = new Transaction().add(
 		Farm.makeWithdrawInstruction({
 			poolKeys: farmPoolKeys,
@@ -261,20 +262,21 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 	withdrawRewardTxn.feePayer = owner;
 	withdrawRewardTxn.sign(ownerKeypair);
 
-	// const withdrawRewardSignature = await connection.sendRawTransaction(withdrawRewardTxn.serialize());
-	// await connection.confirmTransaction(
-	// 	{
-	// 		signature: withdrawRewardSignature,
-	// 		blockhash: lbh3.blockhash,
-	// 		lastValidBlockHeight: lbh3.lastValidBlockHeight,
-	// 	},
-	// 	"confirmed",
-	// );
-	// console.log(`https://solscan.io/tx/${withdrawRewardSignature}`);
+	const withdrawRewardSignature = await connection.sendRawTransaction(withdrawRewardTxn.serialize());
+	await connection.confirmTransaction(
+		{
+			signature: withdrawRewardSignature,
+			blockhash: lbh3.blockhash,
+			lastValidBlockHeight: lbh3.lastValidBlockHeight,
+		},
+		"confirmed",
+	);
+	console.log(`https://solscan.io/tx/${withdrawRewardSignature}`);
 
-	// // end withdraw rewards
+	// end withdraw rewards
 
-	// // withdraw staked lp mints from farm
+	// withdraw staked lp mints from farm
+	console.log("withdrawing staked amounts");
 	const withdrawStakedLpTxn = new Transaction().add(
 		Farm.makeWithdrawInstruction({
 			poolKeys: farmPoolKeys,
@@ -294,16 +296,16 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 	withdrawStakedLpTxn.feePayer = owner;
 	withdrawStakedLpTxn.sign(ownerKeypair);
 
-	// const withdrawStakedLpSignature = await connection.sendRawTransaction(withdrawStakedLpTxn.serialize());
-	// await connection.confirmTransaction(
-	// 	{
-	// 		signature: withdrawStakedLpSignature,
-	// 		blockhash: lbh4.blockhash,
-	// 		lastValidBlockHeight: lbh4.lastValidBlockHeight,
-	// 	},
-	// 	"confirmed",
-	// );
-	// console.log(`https://solscan.io/tx/${withdrawStakedLpSignature}`);
+	const withdrawStakedLpSignature = await connection.sendRawTransaction(withdrawStakedLpTxn.serialize());
+	await connection.confirmTransaction(
+		{
+			signature: withdrawStakedLpSignature,
+			blockhash: lbh4.blockhash,
+			lastValidBlockHeight: lbh4.lastValidBlockHeight,
+		},
+		"confirmed",
+	);
+	console.log(`https://solscan.io/tx/${withdrawStakedLpSignature}`);
 
-	// // end withdraw lp mints
+	// end withdraw lp mints
 })();
