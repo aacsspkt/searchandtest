@@ -18,7 +18,10 @@ import {
 } from '@solana/web3.js';
 
 import { fetchAllFarmPoolKeys } from './utils/raydium-utils/farm-utils';
-import { fetchPoolKeys } from './utils/raydium-utils/liquidity-utils';
+import {
+  fetchAllPoolKeys,
+  fetchPoolKeys,
+} from './utils/raydium-utils/liquidity-utils';
 import { getTokenAccountsByOwner } from './utils/raydium-utils/token-utils';
 import { getOrCreateAssociatedTokenAccount } from './utils/token-utils';
 
@@ -35,6 +38,8 @@ const ownerKeypair = Keypair.fromSecretKey(secretKey);
 
 const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
 const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
+const baseMInt = "G9tt98aYSznRk7jWsfuz9FnTdokxS6Brohdo9hSmjTRB";
+const quoteMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 (async () => {
 	const owner = ownerKeypair.publicKey;
@@ -43,9 +48,22 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 	console.log("getting all token accounts owned by owner");
 	const tokenAccounts = await getTokenAccountsByOwner(connection, owner);
 
+	console.log("fetching pool keys list");
+	const lpPoolKeysList = await fetchAllPoolKeys();
+	console.log(lpPoolKeysList);
+
+	console.log("searching zbc-usdc poolkeys");
+	const lPoolKeys = lpPoolKeysList.find(
+		(keys) => keys.baseMint.toString() == baseMInt && keys.quoteMint.toString() == quoteMint,
+	);
+	if (!lPoolKeys) {
+		throw new Error("Pool not found");
+	}
+	console.log("pool", lPoolKeys);
+
 	// add liquidity
 	console.log("fetching liquidity pool keys");
-	const liquidityPoolKeys = await fetchPoolKeys(connection, new PublicKey(SOL_USDT));
+	const liquidityPoolKeys = await fetchPoolKeys(connection, new PublicKey(lPoolKeys.id));
 
 	console.log("fetching pool info");
 	const poolInfo = await Liquidity.fetchInfo({
@@ -93,18 +111,19 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 	transaction.recentBlockhash = lbh.blockhash;
 	transaction.lastValidBlockHeight = lbh.lastValidBlockHeight;
 	transaction.feePayer = owner;
+	console.log("signers", signers);
 	transaction.sign(...[ownerKeypair, ...signers]);
 
-	const addLiquiditySignature = await connection.sendRawTransaction(transaction.serialize());
-	await connection.confirmTransaction(
-		{
-			signature: addLiquiditySignature,
-			blockhash: lbh.blockhash,
-			lastValidBlockHeight: lbh.lastValidBlockHeight,
-		},
-		"finalized",
-	);
-	console.log(`https://solscan.io/tx/${addLiquiditySignature} \n`);
+	// const addLiquiditySignature = await connection.sendRawTransaction(transaction.serialize());
+	// await connection.confirmTransaction(
+	// 	{
+	// 		signature: addLiquiditySignature,
+	// 		blockhash: lbh.blockhash,
+	// 		lastValidBlockHeight: lbh.lastValidBlockHeight,
+	// 	},
+	// 	"finalized",
+	// );
+	// console.log(`https://solscan.io/tx/${addLiquiditySignature} \n`);
 
 	// end add liquidity
 
@@ -185,17 +204,17 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 		createLedgerAccountTxn.feePayer = owner;
 		createLedgerAccountTxn.sign(ownerKeypair);
 
-		const tokenAccountCreateSignature = await connection.sendRawTransaction(createLedgerAccountTxn.serialize());
-		await connection.confirmTransaction(
-			{
-				signature: tokenAccountCreateSignature,
-				blockhash: lbh1.blockhash,
-				lastValidBlockHeight: lbh1.lastValidBlockHeight,
-			},
-			"finalized",
-		);
-		// ledger account created
-		console.log(`https://solscan.io/tx/${tokenAccountCreateSignature}`);
+		// const tokenAccountCreateSignature = await connection.sendRawTransaction(createLedgerAccountTxn.serialize());
+		// await connection.confirmTransaction(
+		// 	{
+		// 		signature: tokenAccountCreateSignature,
+		// 		blockhash: lbh1.blockhash,
+		// 		lastValidBlockHeight: lbh1.lastValidBlockHeight,
+		// 	},
+		// 	"finalized",
+		// );
+		// // ledger account created
+		// console.log(`https://solscan.io/tx/${tokenAccountCreateSignature}`);
 	}
 
 	// use just for test
@@ -237,16 +256,16 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 	farmDepositTxn.feePayer = owner;
 	farmDepositTxn.sign(ownerKeypair);
 
-	const farmDepositSignature = await connection.sendRawTransaction(farmDepositTxn.serialize());
-	await connection.confirmTransaction(
-		{
-			signature: farmDepositSignature,
-			blockhash: lbh2.blockhash,
-			lastValidBlockHeight: lbh2.lastValidBlockHeight,
-		},
-		"finalized",
-	);
-	console.log(`https://solscan.io/tx/${farmDepositSignature}`);
+	// const farmDepositSignature = await connection.sendRawTransaction(farmDepositTxn.serialize());
+	// await connection.confirmTransaction(
+	// 	{
+	// 		signature: farmDepositSignature,
+	// 		blockhash: lbh2.blockhash,
+	// 		lastValidBlockHeight: lbh2.lastValidBlockHeight,
+	// 	},
+	// 	"finalized",
+	// );
+	// console.log(`https://solscan.io/tx/${farmDepositSignature}`);
 
 	// end farm
 
@@ -270,16 +289,16 @@ const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
 	withdrawRewardTxn.feePayer = owner;
 	withdrawRewardTxn.sign(ownerKeypair);
 
-	const withdrawRewardSignature = await connection.sendRawTransaction(withdrawRewardTxn.serialize());
-	await connection.confirmTransaction(
-		{
-			signature: withdrawRewardSignature,
-			blockhash: lbh3.blockhash,
-			lastValidBlockHeight: lbh3.lastValidBlockHeight,
-		},
-		"finalized",
-	);
-	console.log(`https://solscan.io/tx/${withdrawRewardSignature}`);
+	// const withdrawRewardSignature = await connection.sendRawTransaction(withdrawRewardTxn.serialize());
+	// await connection.confirmTransaction(
+	// 	{
+	// 		signature: withdrawRewardSignature,
+	// 		blockhash: lbh3.blockhash,
+	// 		lastValidBlockHeight: lbh3.lastValidBlockHeight,
+	// 	},
+	// 	"finalized",
+	// );
+	// console.log(`https://solscan.io/tx/${withdrawRewardSignature}`);
 
 	// end withdraw rewards
 
