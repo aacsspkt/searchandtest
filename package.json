@@ -13,11 +13,13 @@
 		"@solana/spl-token": "^0.2.0",
 		"@solana/web3.js": "^1.43.4",
 		"axios": "^0.27.2",
+		"bn.js": "^5.2.1",
 		"bs58": "^5.0.0",
 		"dotenv": "^16.0.1",
 		"node-fetch": "^3.2.4"
 	},
 	"devDependencies": {
+		"@types/bn.js": "^5.1.0",
 		"ts-node": "^10.8.1"
 	}
 }
