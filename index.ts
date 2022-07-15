@@ -323,28 +323,19 @@ const quoteMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 	// fetch multiple pool infos
 
 	console.log("fetching multiple pool");
-	const time = Date.now();
-	let ownersPoolInfos: FarmLedger[] = [];
 	const infos = await Farm.fetchMultipleInfo({
 		connection,
 		pools: list,
 		owner,
 	});
+
+	console.log("filter infos of owner");
+	let ownersPoolInfos: any = {}; // ids are farmPoolId
 	for (const [key, value] of Object.entries(infos)) {
 		if (value.ledger) {
-			ownersPoolInfos.push(value.ledger);
+			ownersPoolInfos[key] = value;
 		}
 	}
-	console.log("Time elapsed: ", (Date.now() - time) / 1000 + "s");
-	console.log(
-		ownersPoolInfos.map((ledger) => {
-			return {
-				owner: ledger.owner.toString(),
-				state: (ledger.state as BN).toString(),
-				id: ledger.id.toString(),
-				deposited: (ledger.deposited as BN).toString(),
-				rewardDebts: (ledger.rewardDebts as BN[]).map((debts) => debts.toString()),
-			};
-		}),
-	);
+	console.log(ownersPoolInfos["CHYrUBX2RKX8iBg7gYTkccoGNBzP44LdaazMHCLcdEgS"]);
+	console.log();
 })();
