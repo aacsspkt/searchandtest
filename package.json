@@ -9,9 +9,9 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"@raydium-io/raydium-sdk": "^1.1.0-beta.5",
+		"@raydium-io/raydium-sdk": "^1.1.0-beta.6",
 		"@solana/spl-token": "^0.2.0",
-		"@solana/web3.js": "^1.43.4",
+		"@solana/web3.js": "^1.50.1",
 		"axios": "^0.27.2",
 		"bn.js": "^5.2.1",
 		"bs58": "^5.0.0",
@@ -19,7 +19,13 @@
 		"node-fetch": "^3.2.4"
 	},
 	"devDependencies": {
+		"@types/axios": "^0.14.0",
 		"@types/bn.js": "^5.1.0",
-		"ts-node": "^10.8.1"
+		"@types/bs58": "^4.0.1",
+		"@types/dotenv": "^8.2.0",
+		"@types/node": "^18.6.3",
+		"@types/node-fetch": "^2.6.2",
+		"ts-node": "^10.8.1",
+		"typescript": "^4.7.4"
 	}
 }

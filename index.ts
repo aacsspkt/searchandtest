@@ -1,18 +1,21 @@
-import bs58 from "bs58";
-import * as dotenv from "dotenv";
-import BN from "bn.js";
-import { Currency, Farm, FarmLedger, Liquidity, Percent, Token, TokenAmount } from "@raydium-io/raydium-sdk";
-import { clusterApiUrl, Connection, Keypair, PublicKey, Transaction } from "@solana/web3.js";
+import bs58 from 'bs58';
+import * as dotenv from 'dotenv';
 
-import { fetchAllFarmPoolKeys } from "./utils/raydium-utils/farm-utils";
-import { fetchAllPoolKeys, fetchPoolKeys } from "./utils/raydium-utils/liquidity-utils";
-import { getTokenAccountsByOwner } from "./utils/raydium-utils/token-utils";
-import { getOrCreateAssociatedTokenAccount } from "./utils/token-utils";
+import {
+  clusterApiUrl,
+  Connection,
+  Keypair,
+} from '@solana/web3.js';
+
+import {
+  fetchAllPoolKeysDevnet,
+} from './utils/raydium-utils/devnet-liquidity-utils';
+import { getTokenAccountsByOwner } from './utils/raydium-utils/token-utils';
 
 // required to load env file
 dotenv.config();
 
-const connection = new Connection(clusterApiUrl("mainnet-beta"));
+const connection = new Connection(clusterApiUrl("devnet"));
 
 const secretKeyString = process.env.SECRET;
 if (!secretKeyString)
@@ -20,9 +23,9 @@ if (!secretKeyString)
 const secretKey = bs58.decode(secretKeyString);
 const ownerKeypair = Keypair.fromSecretKey(secretKey);
 
-const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
-const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
-const baseMInt = "G9tt98aYSznRk7jWsfuz9FnTdokxS6Brohdo9hSmjTRB";
+// const SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2"; // mainnet
+// const SOL_USDT = "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX"; // mainnet
+const baseMInt = "BEcGFQK1T1tSu3kvHC17cyCkQ5dvXqAJ7ExB2bb5Do7a";
 const quoteMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 (async () => {
@@ -33,18 +36,31 @@ const quoteMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 	const tokenAccounts = await getTokenAccountsByOwner(connection, owner);
 
 	console.log("fetching pool keys list");
-	const lpPoolKeysList = await fetchAllPoolKeys();
+	const lpPoolKeysList = await fetchAllPoolKeysDevnet(connection);
+
+	const filtered = lpPoolKeysList.filter(
+		(keys) => keys.baseMint.toString() === baseMInt || keys.quoteMint.toString() === baseMInt,
+	);
+
+	console.log(
+		filtered.map((keys) => {
+			return {
+				id: keys.id.toString(),
+				baseMInt: keys.baseMint.toString(),
+				quoteMint: keys.quoteMint.toString(),
+			};
+		}),
+	);
 	// console.log(lpPoolKeysList);
 
-	console.log("searching zbc-usdc poolkeys");
-	const lPoolKeys = lpPoolKeysList.find(
-		(keys) => keys.baseMint.toString() == baseMInt && keys.quoteMint.toString() == quoteMint,
-	);
-	if (!lPoolKeys) {
-		throw new Error("Pool not found");
-	}
+	// console.log("searching zbc-usdc poolkeys");
+	// const lPoolKeys = lpPoolKeysList.find(
+	// 	(keys) => keys.baseMint.toString() == baseMInt && keys.quoteMint.toString() == quoteMint,
+	// );
+	// if (!lPoolKeys) {
+	// 	throw new Error("Pool not found");
+	// }
 	// console.log("pool", lPoolKeys);
-
 	// // add liquidity
 	// console.log("fetching liquidity pool keys");
 	// const liquidityPoolKeys = await fetchPoolKeys(connection, new PublicKey(lPoolKeys.id));
@@ -98,25 +114,25 @@ const quoteMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 	// console.log("signers", signers);
 	// transaction.sign(...[ownerKeypair, ...signers]);
 
-	// // const addLiquiditySignature = await connection.sendRawTransaction(transaction.serialize());
-	// // await connection.confirmTransaction(
-	// // 	{
-	// // 		signature: addLiquiditySignature,
-	// // 		blockhash: lbh.blockhash,
-	// // 		lastValidBlockHeight: lbh.lastValidBlockHeight,
-	// // 	},
-	// // 	"finalized",
-	// // );
-	// // console.log(`https://solscan.io/tx/${addLiquiditySignature} \n`);
+	// const addLiquiditySignature = await connection.sendRawTransaction(transaction.serialize());
+	// await connection.confirmTransaction(
+	// 	{
+	// 		signature: addLiquiditySignature,
+	// 		blockhash: lbh.blockhash,
+	// 		lastValidBlockHeight: lbh.lastValidBlockHeight,
+	// 	},
+	// 	"finalized",
+	// );
+	// console.log(`https://solscan.io/tx/${addLiquiditySignature} \n`);
 
-	// // end add liquidity
+	// end add liquidity
 
-	// // // add farm
+	// // add farm
 	// console.log("fetching farm pool keys");
-	const list = await fetchAllFarmPoolKeys();
-	// // console.log(poolKeys)
+	// const list = await fetchAllFarmPoolKeys();
+	// console.log(poolKeys)
 
-	// // find farm where lp mint obtained from after adding lp.
+	// find farm where lp mint obtained from after adding lp.
 	// const farmPoolKeys = list.find((keys) => keys.lpMint.toString() === liquidityPoolKeys.lpMint.toString());
 	// console.log(farmPoolKeys?.id.toString());
 	// if (!farmPoolKeys) throw new Error("Farm pool keys not found.");
@@ -188,17 +204,17 @@ const quoteMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 	// 	createLedgerAccountTxn.feePayer = owner;
 	// 	createLedgerAccountTxn.sign(ownerKeypair);
 
-	// 	// const tokenAccountCreateSignature = await connection.sendRawTransaction(createLedgerAccountTxn.serialize());
-	// 	// await connection.confirmTransaction(
-	// 	// 	{
-	// 	// 		signature: tokenAccountCreateSignature,
-	// 	// 		blockhash: lbh1.blockhash,
-	// 	// 		lastValidBlockHeight: lbh1.lastValidBlockHeight,
-	// 	// 	},
-	// 	// 	"finalized",
-	// 	// );
-	// 	// // ledger account created
-	// 	// console.log(`https://solscan.io/tx/${tokenAccountCreateSignature}`);
+	// const tokenAccountCreateSignature = await connection.sendRawTransaction(createLedgerAccountTxn.serialize());
+	// await connection.confirmTransaction(
+	// 	{
+	// 		signature: tokenAccountCreateSignature,
+	// 		blockhash: lbh1.blockhash,
+	// 		lastValidBlockHeight: lbh1.lastValidBlockHeight,
+	// 	},
+	// 	"finalized",
+	// );
+	// // ledger account created
+	// console.log(`https://solscan.io/tx/${tokenAccountCreateSignature}`);
 	// }
 
 	// // use just for test
@@ -322,20 +338,27 @@ const quoteMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 	// fetch multiple pool infos
 
-	console.log("fetching multiple pool");
-	const infos = await Farm.fetchMultipleInfo({
-		connection,
-		pools: list,
-		owner,
-	});
+	// console.log("fetching multiple pool");
+	// const infos = await Farm.fetchMultipleInfo({
+	// 	connection,
+	// 	pools: list,
+	// 	owner,
+	// });
 
-	console.log("filter infos of owner");
-	let ownersPoolInfos: any = {}; // ids are farmPoolId
-	for (const [key, value] of Object.entries(infos)) {
-		if (value.ledger) {
-			ownersPoolInfos[key] = value;
-		}
-	}
-	console.log(ownersPoolInfos["CHYrUBX2RKX8iBg7gYTkccoGNBzP44LdaazMHCLcdEgS"]);
-	console.log();
+	// console.log("filter infos of owner");
+	// let ownersPoolInfos: any = {}; // ids are farmPoolId
+	// for (const [key, value] of Object.entries(infos)) {
+	// 	if (value.ledger) {
+	// 		ownersPoolInfos[key] = value;
+	// 	}
+	// }
+	// console.log(ownersPoolInfos["CHYrUBX2RKX8iBg7gYTkccoGNBzP44LdaazMHCLcdEgS"]);
+	// console.log();
+
+	// const info = await connection.getAccountInfo(owner);
+	// console.log(info?.lamports);
+	// const balance = await connection.getBalance(owner);
+	// console.log(balance);
+
+	// if (process.env.ANOTHER_SECRET) console.log(base58.decode(process.env.ANOTHER_SECRET));
 })();
