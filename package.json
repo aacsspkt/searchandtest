@@ -11,7 +11,7 @@
 	"dependencies": {
 		"@raydium-io/raydium-sdk": "^1.1.0-beta.6",
 		"@solana/spl-token": "^0.2.0",
-		"@solana/web3.js": "^1.50.1",
+		"@solana/web3.js": "^1.50.2",
 		"axios": "^0.27.2",
 		"bn.js": "^5.2.1",
 		"bs58": "^5.0.0",
